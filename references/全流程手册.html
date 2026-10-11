@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figma AI 桥接：全过程记录与操作手册</title>
+<style>
+:root { --ink:#1f2329; --muted:#646a73; --line:#e4e6eb; --accent:#2b6cff; --bg:#ffffff; }
+* { box-sizing: border-box; }
+body { margin:0; background:#f7f8fa; color:var(--ink);
+  font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif; }
+main { max-width:900px; margin:32px auto; background:var(--bg); border:1px solid var(--line);
+  border-radius:12px; padding:42px 56px 56px; box-shadow:0 2px 12px rgba(0,0,0,.05); }
+h1 { font-size:26px; margin:0 0 6px; }
+h2 { font-size:19px; margin:34px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--line); }
+h3 { font-size:16px; margin:22px 0 8px; }
+p, li { line-height:1.8; font-size:14.5px; }
+strong { color:#0f3fbf; }
+blockquote { margin:12px 0; padding:8px 16px; border-left:4px solid var(--accent);
+  background:#f2f6ff; color:var(--muted); border-radius:0 8px 8px 0; font-size:13.5px; }
+code { font-family:Consolas,"Courier New",monospace; background:#f2f3f5;
+  padding:2px 6px; border-radius:4px; font-size:13px; color:#c7254e; }
+pre { background:#1f2329; color:#e6e8eb; padding:14px 16px; border-radius:8px;
+  overflow-x:auto; font-size:13px; line-height:1.6; }
+pre code { background:none; color:inherit; padding:0; }
+table { border-collapse:collapse; width:100%; margin:14px 0; font-size:13.5px; }
+th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+th { background:#f2f3f5; font-weight:600; white-space:nowrap; }
+tr:nth-child(even) td { background:#fafbfc; }
+hr { border:none; border-top:1px solid var(--line); margin:34px 0; }
+em { color:var(--muted); font-style:normal; font-size:12.5px; }
+@media print { body{background:#fff;} main{border:none; box-shadow:none; margin:0; padding:24px;} }
+</style>
+</head>
+<body>
+<main>
+<h1 id="figma-ai">Figma AI 桥接：全过程记录与操作手册</h1>
+<blockquote>
+<p>从「掘金文章方案二」到「AI 直接改设计稿」的完整历程
+整理时间：2026-10-11 · 环境：Windows + Figma 桌面版 + WorkBuddy
+本手册由 WorkBuddy AI 根据全程实测整理，可直接作为教学材料使用</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、一页速览（先看这）</h2>
+<p><strong>目标</strong>：让 AI 直接读取和修改 Figma 设计稿。</p>
+<p><strong>最终方案</strong>：开源插件桥 <code>cursor-talk-to-figma-mcp</code>（本地中继 + Figma 插件）。
+<strong>不需要 Dev Mode、不需要付费计划。</strong></p>
+<p><strong>已验证能力</strong>（2026-10-11 实测）：
+- 读：文档结构 / 页面 / 图层 / 文字 / 位置尺寸颜色
+- 改：文字（读数 0.000 → 2.000 ✅）、颜色（旋钮红点 → 蓝点 ✅）
+- 看：把画板导出成图片，AI 和人一起"看得见"</p>
+<p><strong>日常三步</strong>：
+1. 启动桥接（未运行时双击 <code>启动桥接.vbs</code>）
+2. Figma 里运行插件 → 面板显示 Connected → <strong>面板保持开着</strong>
+3. 把频道号发给 AI，然后说需求</p>
+<hr />
+<h2 id="1-dev-mode">二、起点：文章①「方案二」撞上 Dev Mode 门槛</h2>
+<ol>
+<li>老川发来掘金文章《Figma MCP 使用指南与配置教程》（https://juejin.cn/post/7572390974458953728），要求执行<strong>方案二（Desktop Server）</strong>，并授权代装 Figma 桌面版。</li>
+<li>执行：下载安装 Figma 桌面版 126.10.7（静默安装，签名校验通过，SHA256 与 winget 官方清单一致）。</li>
+<li>卡点：按 <code>Shift+D</code> 想进 Dev Mode 时，弹出 <strong>"Upgrade to work in dev mode"</strong>。</li>
+<li>查证结论：<strong>Figma 官方 MCP 桌面服务器要求付费计划的 Dev/Full 席位</strong>，免费 Starter 版连 Dev Mode 都没有——这是官方限制，不是操作问题。</li>
+<li>相关事实（2026-10 官方文档）：
+   - 官方远程 MCP 服务器（mcp.figma.com）：所有计划可用，但 Starter 限额极低（约 20 次/月），且只允许"名单内客户端"连接。
+   - 教育版（师生可免费申请）≈ Professional 级：含 Dev Mode + 约 200 次/天 MCP 配额。</li>
+<li>结论：官方路线对「免付费 + 教学铺开」不通 → 需要另找一条路。</li>
+</ol>
+<hr />
+<h2 id="2">三、转机：文章② 插件桥（真正能改稿的路线）</h2>
+<ol>
+<li>老川发来文章②《让 AI 直接画 Figma 设计稿！CodeBuddy + Figma MCP 全链路实战》（https://juejin.cn/post/7621026569348513802），问"所谓的插件桥是这个吗"。核对确认：<strong>插件桥 = 开源项目 <code>cursor-talk-to-figma-mcp</code></strong>。</li>
+<li>架构（三层）：</li>
+</ol>
+<pre><code>AI 客户端 ──(stdio/MCP)──&gt; MCP 服务 ──(WebSocket :3055)──&gt; Figma 插件 ──(Plugin API)──&gt; 画布
+                本机进程                      本地中继                     Figma 内部
+</code></pre>
+<ol start="3">
+<li>为什么它能改稿：走的是 <strong>Figma Plugin API</strong>（插件天生拥有设计文件的读写权限），绕开了官方 MCP 的 Dev Mode 开关。</li>
+<li>关键认知：<strong>访问令牌（REST API）是只读的，改不了稿</strong>；agent 真正改稿只能走插件桥。</li>
+<li>代价与局限：非官方方案；需要本机常驻一个中继服务；依赖 Figma 插件面板保持运行。</li>
+</ol>
+<hr />
+<h2 id="windows">四、搭建过程（Windows 全步骤 + 全部踩坑）</h2>
+<h3 id="41-bun">4.1 环境：Bun</h3>
+<ul>
+<li>npm 全局安装 Bun 会失败（<code>@oven/bun-windows-x64</code> 平台包被静默跳过，官方源/镜像都试过）。</li>
+<li>解法：从 npmmirror 下载二进制包直装 → <code>C:\Users\fly04\.bun\bin\bun.exe</code>（1.4.3），并把 <code>bun</code> / <code>bunx</code> 垫片写入 <code>%APPDATA%\npm\</code>。</li>
+</ul>
+<h3 id="42">4.2 桥接仓库</h3>
+<ul>
+<li>位置：<code>C:\Users\fly04\.workbuddy-ai\tools\figma-bridge\repo\</code>（github: grab/cursor-talk-to-figma-mcp，main @ v0.3.5）。</li>
+<li>依赖：<code>bun install --production</code>。</li>
+<li>注意：<strong>npm 包不含中继服务</strong>，必须运行仓库里的 <code>src/socket.ts</code>。</li>
+</ul>
+<h3 id="43">4.3 启动中继</h3>
+<ul>
+<li>命令：<code>bun run src/socket.ts</code> → 监听 <code>ws://localhost:3055</code>。</li>
+<li>一键脚本：<code>启动桥接.vbs</code>（后台启动）/ <code>停止桥接.bat</code>（停止）。</li>
+<li>自检：<code>netstat -ano | findstr 3055</code> 应看到 LISTENING。</li>
+</ul>
+<h3 id="44-figma">4.4 Figma 插件</h3>
+<ul>
+<li>方式 A（社区版）：Figma 社区搜索 "Cursor Talk To Figma MCP" 安装。</li>
+<li>方式 B（本地开发版，推荐）：
+  1. 菜单 Figma → Plugins → Development → <strong>Import plugin from manifest…</strong>
+  2. 选择：<code>C:\Users\fly04\.workbuddy-ai\tools\figma-bridge\repo\src\cursor_mcp_plugin\manifest.json</code>
+  3. 之后每次运行：Plugins → Development → <strong>Cursor MCP Plugin</strong> → Connect</li>
+<li>面板显示 <code>Connected to server in channel: xxxxxxxx</code>——这 8 位编号就是<strong>频道号（Channel ID）</strong>。</li>
+</ul>
+<h3 id="45-ai">4.5 AI 侧调用</h3>
+<ul>
+<li>MCP 服务：<code>bun x cursor-talk-to-figma-mcp@latest</code>（stdio 协议）。</li>
+<li>调用流程：<code>join_channel(频道号)</code> → 调用各种工具 → 结束。</li>
+<li>共 <strong>44 个工具</strong>：读文档 / 读图层 / 扫文字 / 扫类型 / 改文字 / 改颜色 / 移动 / 缩放 / 建组件 / 导出图片……</li>
+<li>本机工具脚本（<code>figma-bridge\</code> 目录）：</li>
+<li><code>figma_e2e_check.py &lt;频道&gt;</code>：端到端自检（加入频道 + 读文档信息）</li>
+<li><code>figma_call.py &lt;频道&gt; &lt;工具名&gt; '[参数JSON]'</code>：单次调用任意工具</li>
+<li><code>figma_call.py &lt;频道&gt; --batch '[…]'</code>：批量调用；导出图片自动保存 <code>_export_*.png</code></li>
+</ul>
+<hr />
+<h2 id="_2">五、稳定性战役（踩坑大全·血泪实测版）</h2>
+<p>这是全过程中最费劲的部分，每一条都是真实踩出来的：</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>现象</th>
+<th>根因</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>插件连上后约 2 分钟必断</td>
+<td><strong>Bun 运行时会掐断空闲 120 秒的 WebSocket</strong></td>
+<td>中继源码加 <code>idleTimeout: 0</code> 并重启</td>
+</tr>
+<tr>
+<td>2</td>
+<td>面板显示 Connected，但命令发不到 Figma</td>
+<td>① 连接其实早已断，面板文字是<strong>过期残留</strong>；② 等 AI 操作时窗口期已过</td>
+<td>以中继日志为准（join/close 行 + netstat）；部署"自动狙击"秒级接应</td>
+</tr>
+<tr>
+<td>3</td>
+<td>连接只活了几秒就断（实测 4 秒）</td>
+<td><strong>close code 1001 = "正在离开"</strong>：面板被关闭/切走（已排查：插件代码无自杀逻辑）</td>
+<td>★ <strong>面板必须一直开着</strong>——关面板=拔电话线，谁也救不回</td>
+</tr>
+<tr>
+<td>4</td>
+<td>每次重开插件频道号都变</td>
+<td>插件每次启动随机生成频道名</td>
+<td>正常现象；重开后把新频道号发给 AI 即可</td>
+</tr>
+<tr>
+<td>5</td>
+<td>读图层读不到矢量图形</td>
+<td>MCP 服务端会<strong>过滤掉 VECTOR 节点</strong></td>
+<td>改用 <code>scan_nodes_by_types</code> 扫类型（拿到全部 27 个图层）</td>
+</tr>
+<tr>
+<td>6</td>
+<td>文字扫描（scan_text_nodes）超时</td>
+<td>分块扫描与后台轮询互相干扰</td>
+<td>操作前先停后台轮询进程</td>
+</tr>
+<tr>
+<td>7</td>
+<td>出现"幽灵进程"</td>
+<td><code>bun x</code> 实际以 node.exe 运行；父进程死后子进程不退出</td>
+<td>需要时手动清理</td>
+</tr>
+<tr>
+<td>8</td>
+<td>首次 join 报"连接未就绪"</td>
+<td>启动竞态</td>
+<td>等连接稳定 + join 重试（工具已内置）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2026-10-11">六、最终稳定形态（2026-10-11 完成）</h2>
+<ul>
+<li><strong>自动狙击系统</strong>：监听中继日志 → 插件一上线 <strong>1 秒发现</strong> → 探测器 <strong>8 秒内自动读取</strong>文档信息，写入 <code>_probe_hits.log</code>。</li>
+<li><strong>标准闭环</strong>（已实测两次）：用户点单 → AI 执行 → 导出图片验收</li>
+<li>读数 0.000 → <strong>2.000</strong> ✅（节点 2:7）</li>
+<li>旋钮红点 → <strong>蓝点 #1E90FF</strong> ✅（节点 2:9）</li>
+<li>中继日志具备完整取证：精确时间戳 / 断连代码 / 30 秒心跳 / 存活信标。</li>
+</ul>
+<hr />
+<h2 id="sop">七、日常使用 SOP（三步）</h2>
+<ol>
+<li><strong>启动桥接</strong>（未运行时双击 <code>启动桥接.vbs</code>；或让 AI 启动）。</li>
+<li><strong>Figma 里运行插件</strong>：Plugins → Development → Cursor MCP Plugin → Connect。
+   ★★ 面板保持开着：不要按 Esc、不要关面板、不要切换插件。</li>
+<li><strong>把频道号发给 AI，直接说需求</strong>，例如：
+   - "读一下这个文件的图层结构"
+   - "把读数改成 220.5"
+   - "把 10A 标签改成 20A，换成紫色"</li>
+<li>AI 改完会<strong>导出图片给你验收</strong>（改了什么一目了然）。</li>
+</ol>
+<hr />
+<h2 id="_3">八、教学复用建议</h2>
+<ul>
+<li>每台机器各自部署三件套：<strong>Bun + 桥接目录 + Figma 插件（导入 manifest）</strong>。</li>
+<li>中继是<strong>本机服务</strong>（localhost:3055），每人跑自己的，互不干扰、无需局域网。</li>
+<li>建议分发的材料：</li>
+<li>本手册（全流程）</li>
+<li><code>使用说明.txt</code>（简明版）</li>
+<li>桥接目录压缩包（含 repo + 启动脚本）</li>
+<li>示例导出图（万用表改前/改后对照）</li>
+<li>学生常见问题预判：</li>
+<li>"Connected 了但 AI 说连不上" → 面板是不是关了？中继是不是没启动？</li>
+<li>"频道号在哪？" → 插件面板那一行 <code>Connected to server in channel: xxxxxxxx</code></li>
+<li>"怎么让 AI 改颜色？" → 直接说"把某某改成某某色"就行</li>
+</ul>
+<hr />
+<h2 id="_4">九、关键路径速查</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>桥接总目录</td>
+<td><code>C:\Users\fly04\.workbuddy-ai\tools\figma-bridge\</code></td>
+</tr>
+<tr>
+<td>中继服务源码</td>
+<td><code>repo\src\socket.ts</code>（端口 3055）</td>
+</tr>
+<tr>
+<td>Figma 插件（本地版）</td>
+<td><code>repo\src\cursor_mcp_plugin\manifest.json</code></td>
+</tr>
+<tr>
+<td>启停脚本</td>
+<td><code>启动桥接.vbs</code> / <code>停止桥接.bat</code></td>
+</tr>
+<tr>
+<td>中继实时日志</td>
+<td><code>socket.log</code>（历史归档 <code>socket_*.log</code>）</td>
+</tr>
+<tr>
+<td>自动狙击日志</td>
+<td><code>_auto_watcher.log</code>、命中记录 <code>_probe_hits.log</code></td>
+</tr>
+<tr>
+<td>导出图片</td>
+<td><code>万用表画板导出*.png</code>、<code>_export_*.png</code></td>
+</tr>
+<tr>
+<td>Bun 运行时</td>
+<td><code>C:\Users\fly04\.bun\bin\bun.exe</code></td>
+</tr>
+<tr>
+<td>简明使用说明</td>
+<td><code>使用说明.txt</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_5">十、时间线</h2>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10-10 晚</td>
+<td>文章①（方案二）→ 装 Figma 桌面版 → 卡在 Dev Mode 付费门槛</td>
+</tr>
+<tr>
+<td>10-10 晚</td>
+<td>讨论教学路线 + 改稿可行性 → 确定插件桥路线</td>
+</tr>
+<tr>
+<td>10-11 上午</td>
+<td>文章②确认 → 搭 Bun / 仓库 / 中继 → <strong>首次端到端读通</strong> ✅</td>
+</tr>
+<tr>
+<td>10-11 下午</td>
+<td>稳定性战役：idleTimeout → 1001 真相 → 部署自动狙击</td>
+</tr>
+<tr>
+<td>10-11 傍晚</td>
+<td><strong>完整读写闭环</strong>：万用表全结构读取（27 图层）→ 改读数 2.000 → 改蓝点 ✅</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_6">附：参考链接</h2>
+<ul>
+<li>教程原文（插件桥全链路实战）：https://juejin.cn/post/7621026569348513802</li>
+<li>官方 MCP 指南（「方案二」背景）：https://juejin.cn/post/7572390974458953728</li>
+<li>上游开源仓库：https://github.com/grab/cursor-talk-to-figma-mcp</li>
+<li>排错先看：本技能内 <code>references/pitfalls.md</code>（本桥加固版，含 8 条实测坑）</li>
+</ul>
+<p><em>完</em></p>
+</main>
+</body>
+</html>
